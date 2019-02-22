@@ -1,0 +1,57 @@
+syntax = "proto2";
+package messages.proto;
+
+message Command{
+	required string cmd = 1;
+}
+
+message Result{
+	required int32 return_code = 1;
+	optional string cmd = 2;
+}
+
+message RegisterReq{
+	required string address = 1;
+	required int32 priority = 2;
+}
+
+message RegisterRes{
+	required string masterAddress = 1;
+}
+
+message MasterBroadcast{
+	required string masterAddress = 1;
+}
+
+message Alive{
+	required string address = 1;
+}
+
+message Error{
+	required int32 error_code = 1;
+	optional string reason = 2;
+}
+
+message Msg {
+  enum MessageType {
+    TYPE_UNKNOWN = 0;
+    TYPE_Command = 1;
+    TYPE_Result = 2;
+    TYPE_RegisterReq = 3;
+    TYPE_RegisterRes = 4;
+    TYPE_MasterBroadcast = 5;
+    TYPE_PING = 6;
+    TYPE_PONG = 7;
+    TYPE_Error = 8;
+    TYPE_Alive = 9;
+  }
+  optional MessageType type = 1;
+  optional Command comand = 2;
+  optional Result result = 3;
+  optional RegisterReq registerreq = 4;
+  optional RegisterRes registerres = 5;
+  optional MasterBroadcast masterbroadcast = 6;
+  optional Error error = 7;
+  optional Alive alive = 8;
+}
+
