@@ -89,15 +89,24 @@ class RegisterService
       }
       
       if(is_ereased)
-	chooseNewMaster();
+	chooseAndBroadcastMaster();
       
       std::this_thread::sleep_for(std::chrono::seconds(intervalSec));
     }
   }
   
+  void chooseAndBroadcastMaster()
+  {
+    std::string winner = chooseNewMaster();
+    if(winner != masterAddress)
+    {
+      masterAddress = winner;
+      broadcastMaster();
+    }
+  }
 
   
-  void chooseNewMaster()
+  std::string chooseNewMaster()
   {
     //std::cout<<"ChooseNewMaster"<<std::endl;
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
@@ -111,20 +120,18 @@ class RegisterService
     std::uniform_int_distribution<int> regular (1,sumPriority);
     int choose = regular(generator);
     
+    std::string winner = "";
     int sum = 0;
     for(const auto& x: adressesInfo)
     {
       if(sum + x.second.priority > choose)
       {
-	if(masterAddress != x.first)
-	{
-	  masterAddress = x.first;
-	  broadcastMaster();
-	}
+	winner = x.first;
 	break;
       }
       sum += x.second.priority;
     }
+    return winner;
   }
   
   void broadcastMaster()
@@ -143,13 +150,13 @@ class RegisterService
     {
       adressesInfo[address] = {priority, std::chrono::steady_clock::now()};
       std::cout<<"Address registered: "<<address<<", priority: "<<priority<<std::endl;
-      chooseNewMaster();
+      chooseAndBroadcastMaster();
     }
     else if(adressesInfo[address].priority != priority)
     {
       adressesInfo[address] = {priority, std::chrono::steady_clock::now()};
       std::cout<<"Change priority of: "<<address<<", new priority: "<<priority<<std::endl;
-      chooseNewMaster();
+      chooseAndBroadcastMaster();
     }
     else
     {

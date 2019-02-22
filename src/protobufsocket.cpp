@@ -24,13 +24,15 @@ bool ProtoBufSocketWrapper::send(const ::google::protobuf::Message& msg, int fla
   msg.SerializeToString(&response);
   zmq::message_t reply (response.size());
   memcpy ((void *) reply.data (), response.c_str(), response.size());
-  zmq::socket_t::send (reply, flags);
+  return zmq::socket_t::send (reply, flags);
 }
 
 bool ProtoBufSocketWrapper::recv(::google::protobuf::Message& msg, int flags)
 {
   zmq::message_t request;
-  zmq::socket_t::recv (&request, flags);
+  bool ret = zmq::socket_t::recv (&request, flags);
   std::string msg_str(static_cast<char*>(request.data()), request.size());
   msg.ParseFromString(msg_str);
+  
+  return ret;
 }

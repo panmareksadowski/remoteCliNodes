@@ -11,6 +11,7 @@ Node::Node(std::string myAddress_, int priority_) :
   {
     clientSocket.setsockopt(ZMQ_RCVTIMEO, 5000);
     clientSocket.setsockopt(ZMQ_SNDTIMEO, 1000);
+    clientSocket.setsockopt(ZMQ_REQ_RELAXED, 1);
     
     subscriberSocket.connect ("tcp://"+registerServiceAddress+":"+std::to_string(broadcastPort));
     subscriberSocket.setsockopt(ZMQ_SUBSCRIBE, "", 0);
@@ -63,13 +64,18 @@ void Node::client()
     messages::proto::Msg cmdReq;
     cmdReq.set_type(messages::proto::Msg_MessageType_TYPE_Command);
     cmdReq.mutable_comand()->set_cmd(cmdStr); 
-    clientSocket.send (cmdReq);
-
-
+    if(!clientSocket.send (cmdReq))
+    {
+      std::cout<<"Master unavailable."<< std::endl;
+      continue;
+    }
 
     messages::proto::Msg cmdResult;
-    clientSocket.recv (cmdResult);
-    if (cmdResult.result().return_code() == 0)
+    if(!clientSocket.recv (cmdResult))
+    {
+      std::cout<<"Timeout, master not respond."<< std::endl;
+    }
+    else if (cmdResult.result().return_code() == 0)
     {
       std::cout<<cmdResult.result().cmd() << std::endl;
     }
@@ -133,8 +139,10 @@ void Node::changeMasterAddress(std::string newMasterAddress)
     clientSocket.disconnect("tcp://"+masterAddress);
   }
   masterAddress = newMasterAddress;
-  clientSocket.connect ("tcp://"+newMasterAddress);
-  
+  if(masterAddress != "")
+  {
+    clientSocket.connect ("tcp://"+newMasterAddress);
+  }
 }
   
 /*not implemented
