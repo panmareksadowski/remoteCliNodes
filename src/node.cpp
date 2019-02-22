@@ -17,8 +17,6 @@ Node::Node(std::string myAddress_, int priority_) :
     subscriberSocket.setsockopt(ZMQ_SUBSCRIBE, "", 0);
     
     registerSocket.connect ("tcp://"+registerServiceAddress+":"+std::to_string(registerPort));
-    registerSocket.setsockopt(ZMQ_RCVTIMEO, 1000);
-    registerSocket.setsockopt(ZMQ_SNDTIMEO, 1000);
   }
     
 void Node::start()
@@ -100,7 +98,7 @@ void Node::prompt()
 
 void Node::masterListener()
 {
-
+  
   while (true) 
   {
       messages::proto::Msg msgReq;
@@ -121,7 +119,7 @@ void Node::registerMyAddress(int interval)
     registerMsg.mutable_registerreq()->set_address(myAddress);
     registerMsg.mutable_registerreq()->set_priority(priority);
     registerSocket.send (registerMsg);
-
+    
     messages::proto::Msg respMsg;
     registerSocket.recv (respMsg);
     changeMasterAddress(respMsg.registerres().masteraddress());
