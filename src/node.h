@@ -34,7 +34,7 @@ private:
   
   void prompt();
   
-  void changeMasterAddress(std::string newMasterAddress);
+  void changeMasterAddress(std::string newMasterAddress, bool reconnectToThesameMaster = false);
   
   
   zmq::context_t context;

@@ -9,7 +9,7 @@ Node::Node(std::string myAddress_, int priority_) :
   priority(priority_),
   masterAddress("")
   {
-    clientSocket.setsockopt(ZMQ_RCVTIMEO, 5000);
+    clientSocket.setsockopt(ZMQ_RCVTIMEO, 6000);
     clientSocket.setsockopt(ZMQ_SNDTIMEO, 1000);
     clientSocket.setsockopt(ZMQ_REQ_RELAXED, 1);
     
@@ -67,6 +67,7 @@ void Node::client()
     if(!clientSocket.send (cmdReq))
     {
       std::cout<<"Master unavailable."<< std::endl;
+      changeMasterAddress(getMasterAddress(), true);
       continue;
     }
 
@@ -74,6 +75,7 @@ void Node::client()
     if(!clientSocket.recv (cmdResult))
     {
       std::cout<<"Timeout, master not respond."<< std::endl;
+      changeMasterAddress(getMasterAddress(), true);
     }
     else if (cmdResult.result().return_code() == 0)
     {
@@ -128,10 +130,10 @@ void Node::registerMyAddress(int interval)
   }
 }
 
-void Node::changeMasterAddress(std::string newMasterAddress)
+void Node::changeMasterAddress(std::string newMasterAddress, bool reconnectToThesameMaster)
 {
   std::lock_guard<std::mutex> masterAddressGuard(masterAddressMutex);
-  if(masterAddress == newMasterAddress)
+  if(masterAddress == newMasterAddress && !reconnectToThesameMaster)
     return;
   
   if(masterAddress != "")

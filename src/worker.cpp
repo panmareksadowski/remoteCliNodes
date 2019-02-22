@@ -17,6 +17,7 @@
 
 #include "worker.h"
 #include "node.h"
+#include <future>  
 
  void Worker::listener()
   {
@@ -31,7 +32,18 @@
 	if(msgReq.type() == messages::proto::Msg_MessageType_TYPE_Command && node.getMasterAddress() == myAddress)
 	{
 	  //std::cout<<msgReq.comand().cmd()<<std::endl;
-	  msgRes = exec(msgReq.comand());
+	  
+	  std::future<messages::proto::Msg> futureMsgRes = std::async (std::launch::async, &Worker::exec, this, msgReq.comand());
+	  
+	  if( futureMsgRes.wait_for( std::chrono::seconds(5)) ==  std::future_status::ready)
+	  {
+	    msgRes = futureMsgRes.get();
+	  }
+	  else
+	  {
+	    msgRes.set_type(messages::proto::Msg_MessageType_TYPE_Result);	
+	    msgRes.mutable_result()->set_return_code(-2);
+	  }
 	}
 	else
 	{
