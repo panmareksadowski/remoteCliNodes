@@ -26,7 +26,7 @@ void Node::start()
   std::cout<<"Server address: "<<myAddress<<std::endl;
   std::cout<<"Priority: "<<priority<<std::endl;
   
-  BalancingServer server(context, myAddress, masterAddress);
+  BalancingServer server(context, myAddress, *this);
   
   std::thread register_t(std::bind(&Node::registerMyAddress, this, 15));
   std::thread server_t(std::bind(&BalancingServer::run, &server));
@@ -41,19 +41,17 @@ void Node::start()
   std::cout<<"Shutting down node"<<std::endl;
 }
 
+std::string Node::getMasterAddress() const
+{
+  std::lock_guard<std::mutex> masterAddressGuard(masterAddressMutex);
+  return masterAddress;
+}
+
 void Node::client()
 { 
-  
-  while(masterAddress == "")
-  {
-    std::cout<<"Waiting for master..."<<std::endl;
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-  }
-  clientSocket.connect ("tcp://"+masterAddress);
-
   while (true) 
   {
-    while(masterAddress == "")
+    while(getMasterAddress() == "")
     {
       std::cout<<"Waiting for master..."<<std::endl;
       std::this_thread::sleep_for(std::chrono::seconds(2));
@@ -101,13 +99,7 @@ void Node::masterListener()
       subscriberSocket.recv (msgReq);
       if(msgReq.type() == messages::proto::Msg_MessageType_TYPE_MasterBroadcast)
       {
-	if(masterAddress != "")
-	{
-	  clientSocket.disconnect("tcp://"+masterAddress);
-	}
-	masterAddress = msgReq.masterbroadcast().masteraddress();
-	clientSocket.connect ("tcp://"+masterAddress);
-	
+	changeMasterAddress(msgReq.masterbroadcast().masteraddress());
       }
   }
 }
@@ -124,10 +116,25 @@ void Node::registerMyAddress(int interval)
 
     messages::proto::Msg respMsg;
     registerSocket.recv (respMsg);
-    masterAddress = respMsg.registerres().masteraddress();
+    changeMasterAddress(respMsg.registerres().masteraddress());
     
     std::this_thread::sleep_for(std::chrono::seconds(interval));
   }
+}
+
+void Node::changeMasterAddress(std::string newMasterAddress)
+{
+  std::lock_guard<std::mutex> masterAddressGuard(masterAddressMutex);
+  if(masterAddress == newMasterAddress)
+    return;
+  
+  if(masterAddress != "")
+  {
+    clientSocket.disconnect("tcp://"+masterAddress);
+  }
+  masterAddress = newMasterAddress;
+  clientSocket.connect ("tcp://"+newMasterAddress);
+  
 }
   
 /*not implemented

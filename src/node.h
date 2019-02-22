@@ -9,6 +9,7 @@
 #include <string>
 #include <boost/program_options.hpp>
 #include <thread>
+#include <mutex>
 #include <functional>
 #include <chrono>
 #include "balancingserver.h"
@@ -19,7 +20,8 @@ class Node
  public:
     Node(std::string myAddress_, int priority_);
     void start();
-  
+    
+    std::string getMasterAddress() const;
 private:
   void client();
   void masterListener();
@@ -32,12 +34,15 @@ private:
   
   void prompt();
   
+  void changeMasterAddress(std::string newMasterAddress);
+  
   
   zmq::context_t context;
   ProtoBufSocketWrapper clientSocket;
   ProtoBufSocketWrapper subscriberSocket;
   ProtoBufSocketWrapper registerSocket;
   
+  mutable std::mutex masterAddressMutex; //in C++ 17 could change to shared_lock
   std::string masterAddress;
   std::string myAddress;
   int priority;

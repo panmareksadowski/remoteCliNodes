@@ -16,6 +16,7 @@
  */
 
 #include "worker.h"
+#include "node.h"
 
  void Worker::listener()
   {
@@ -27,7 +28,7 @@
 	workerSocket.recv (msgReq);
 	
 	messages::proto::Msg msgRes;
-	if(msgReq.type() == messages::proto::Msg_MessageType_TYPE_Command && masterAddress == myAddress)
+	if(msgReq.type() == messages::proto::Msg_MessageType_TYPE_Command && node.getMasterAddress() == myAddress)
 	{
 	  //std::cout<<msgReq.comand().cmd()<<std::endl;
 	  msgRes = exec(msgReq.comand());

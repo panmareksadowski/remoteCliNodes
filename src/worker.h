@@ -12,12 +12,14 @@
 #include <messages.pb.h>
 #include "protobufsocket.h"
 
+class Node;
+
 class Worker
 {
     public:
-      Worker(zmq::context_t& context, std::string myAddress_, std::string& masterAddress_) :
+      Worker(zmq::context_t& context, std::string myAddress_, const Node &node_) :
 	    myAddress(myAddress_),
-	    masterAddress(masterAddress_),
+	    node(node_),
 	    workerSocket(context, ZMQ_REP)
 	    
       {
@@ -35,7 +37,7 @@ class Worker
   
     
     std::string myAddress;
-    std::string& masterAddress;
+    const Node &node;
     
     ProtoBufSocketWrapper workerSocket;
     

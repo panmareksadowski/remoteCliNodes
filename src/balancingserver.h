@@ -10,13 +10,15 @@
 #include <functional>
 #include "protobufsocket.h"
 
+class Node;
+
 class BalancingServer {
 public:
     BalancingServer() = delete;
     BalancingServer(BalancingServer&) = delete;
     BalancingServer& operator=(BalancingServer&) = delete;
     
-    BalancingServer(zmq::context_t& context, std::string myAddress_, std::string& masterAddress_);
+    BalancingServer(zmq::context_t& context, std::string myAddress_, const Node &node_);
 
     enum { kMaxThread = 10 };
 
@@ -25,7 +27,7 @@ public:
 private:
     std::string myAddress;
     
-    std::string& masterAddress;
+    const Node &node;
     zmq::context_t& context;
     
     ProtoBufSocketWrapper frontend;
