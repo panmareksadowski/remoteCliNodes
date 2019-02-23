@@ -18,8 +18,8 @@ class RegisterService
 {  
   public:
   RegisterService(std::string myAddress_ = "127.0.0.1",
-		  int registerPort = 4112, int broadcastPort = 4113, int aliverPort = 4114,
-		  int maxInactiveNodeTime_ = 30
+		  int registerPort = 4112, int broadcastPort = 4113,
+		  int maxInactiveNodeTime_ = 4
  		) : 
 	myAddress(myAddress_),
 	masterAddress(""), 
@@ -37,7 +37,7 @@ class RegisterService
   
   void start()
   {
-    std::thread remover_t(std::bind(&RegisterService::removeNotActiveNodes, this, maxInactiveNodeTime, maxInactiveNodeTime/3));
+    std::thread remover_t(std::bind(&RegisterService::removeNotActiveNodes, this, maxInactiveNodeTime, maxInactiveNodeTime/2));
     
     while (true) 
     {
@@ -64,7 +64,7 @@ class RegisterService
     remover_t.join();
   }
   
-  void removeNotActiveNodes(int maxTimeSec, int intervalSec = 10)
+  void removeNotActiveNodes(int maxTimeSec, int intervalSec = 1)
   {
     
     while(true)
@@ -72,14 +72,16 @@ class RegisterService
       std::cout<<"Remove all inactive nodes."<<std::endl;
       std::cout<<"Active nodes:"<<std::endl;
       
-      bool is_ereased = false;;
+      bool currentMasterEreased = false;;
       auto currentTime = std::chrono::steady_clock::now();
       for(auto it = adressesInfo.begin(); it != adressesInfo.end(); )
       {
 	if(std::chrono::duration_cast<std::chrono::seconds>(currentTime-it->second.lastSeen).count() > maxTimeSec)
 	{
+	  if(it->first == masterAddress)
+	    currentMasterEreased = true;
 	  adressesInfo.erase(it++);
-	  is_ereased = true;
+	  
 	}
 	else
 	{
@@ -88,7 +90,7 @@ class RegisterService
 	}
       }
       
-      if(is_ereased)
+      if(currentMasterEreased)
 	chooseAndBroadcastMaster();
       
       std::this_thread::sleep_for(std::chrono::seconds(intervalSec));
@@ -124,12 +126,13 @@ class RegisterService
     int sum = 0;
     for(const auto& x: adressesInfo)
     {
-      if(sum + x.second.priority > choose)
+      sum += x.second.priority;
+      if(sum >= choose)
       {
 	winner = x.first;
 	break;
       }
-      sum += x.second.priority;
+      
     }
     return winner;
   }
@@ -232,17 +235,22 @@ int main(int argc, const char *argv[])
     options_description desc{"Options"};
     desc.add_options()
       ("help,h", "Help screen")
-      ("broker-addr", value<std::string>()->default_value("127.0.0.1:4321"), "node address")
-      ("priority", value<int>()->default_value(0), "Priority( to be master node)");
+      ("addr", value<std::string>()->default_value("127.0.0.1"), "Register service address(without port)")
+      ("registerPort", value<int>()->default_value(4112), "Port of register endpoint")
+      ("broadcastMasterPort", value<int>()->default_value(4113), "Port of broadcast master endpoint")
+      ("maxInactiveNodeTime", value<int>()->default_value(4), "Max time of inactive node in sec");
 
     variables_map vm;
     store(parse_command_line(argc, argv, desc), vm);
 
     if (vm.count("help"))
       std::cout << desc << '\n';
-    else if (vm.count("broker-addr") && vm.count("priority"))
+    else if (vm.count("addr") && vm.count("registerPort") && vm.count("broadcastMasterPort") && vm.count("maxInactiveNodeTime"))
     {
-      RegisterService rs;
+      RegisterService rs(vm["addr"].as<std::string>(), 
+			 vm["registerPort"].as<int>(), 
+			 vm["broadcastMasterPort"].as<int>(), 
+			 vm["maxInactiveNodeTime"].as<int>());
       rs.start();
     }
     else

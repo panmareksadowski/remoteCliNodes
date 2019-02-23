@@ -18,7 +18,7 @@ void Node::start()
   std::cout<<"Server address: "<<myAddress<<std::endl;
   std::cout<<"Priority: "<<priority<<std::endl;
   
-  std::thread register_t(std::bind(&RegisterNodeAddress::run, &registerAddress, 15));
+  std::thread register_t(std::bind(&RegisterNodeAddress::run, &registerAddress, 2));
   std::thread server_t(std::bind(&BalancingServer::run, &server));
   std::thread masterListener_t(std::bind(&MasterListener::run, &masterListener));
   std::thread client_t(std::bind(&Client::run, &client));
