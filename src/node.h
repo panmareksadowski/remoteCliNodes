@@ -14,6 +14,9 @@
 #include <chrono>
 #include "balancingserver.h"
 #include "protobufsocket.h"
+#include "client.h"
+#include "registernodeaddress.h"
+#include "masterlistener.h"
 
 class Node
 {
@@ -22,36 +25,33 @@ class Node
     void start();
     
     std::string getMasterAddress() const;
+    std::string getMyAddress() const;
+    int getPriority() const;
+    
+    void changeMasterAddress(std::string newMasterAddress);
+    
+    static std::string getRegisterEndpoint();
+    static std::string getBroadcatMasterEndpoint();
 private:
-  void client();
-  void masterListener();
-
-  void registerMyAddress(int interval);
-
-  void pinger(std::string address, int priority);
-
-  void aliver(int interval);
-  
-  void prompt();
-  
-  void changeMasterAddress(std::string newMasterAddress, bool reconnectToThesameMaster = false);
+  //void pinger(std::string address, int priority);
   
   
   zmq::context_t context;
-  ProtoBufSocketWrapper clientSocket;
-  ProtoBufSocketWrapper subscriberSocket;
-  ProtoBufSocketWrapper registerSocket;
   
   mutable std::mutex masterAddressMutex; //in C++ 17 could change to shared_lock
   std::string masterAddress;
   std::string myAddress;
   int priority;
   
+  BalancingServer server;
+  Client client;
+  RegisterNodeAddress registerAddress; 
+  MasterListener masterListener;
+  
   static const std::string registerServiceAddress;
   static const int registerPort = 4112;
-  static const int broadcastPort = 4113;
-  static const int alivePort = 4114;
-  
+  static const int broadcastMasterPort = 4113;
 };
+
 
 #endif // NODE_H

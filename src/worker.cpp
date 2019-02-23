@@ -29,7 +29,7 @@
 	workerSocket.recv (msgReq);
 	
 	messages::proto::Msg msgRes;
-	if(msgReq.type() == messages::proto::Msg_MessageType_TYPE_Command && node.getMasterAddress() == myAddress)
+	if(msgReq.type() == messages::proto::Msg_MessageType_TYPE_Command && node.getMasterAddress() == node.getMyAddress())
 	{
 	  //std::cout<<msgReq.comand().cmd()<<std::endl;
 	  

@@ -20,6 +20,9 @@ add_executable(node src/main.cpp
   src/balancingserver.cpp
   src/worker.cpp
   src/node.cpp
+  src/client.cpp
+  src/masterlistener.cpp
+  src/registernodeaddress.cpp
   src/protobufsocket.cpp
   #here comes new source files
   )

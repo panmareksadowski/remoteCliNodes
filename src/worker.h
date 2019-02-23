@@ -17,8 +17,7 @@ class Node;
 class Worker
 {
     public:
-      Worker(zmq::context_t& context, std::string myAddress_, const Node &node_) :
-	    myAddress(myAddress_),
+      Worker(zmq::context_t& context, const Node &node_) :
 	    node(node_),
 	    workerSocket(context, ZMQ_REP)
 	    

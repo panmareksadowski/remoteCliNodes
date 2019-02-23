@@ -2,21 +2,14 @@
 
 Node::Node(std::string myAddress_, int priority_) : 
   context(1),
-  clientSocket(context, ZMQ_REQ),
-  subscriberSocket(context, ZMQ_SUB),
-  registerSocket(context, ZMQ_REQ),
+  server(context, *this),
+  client(context, *this),
+  registerAddress(context, *this),
+  masterListener(context, *this),
   myAddress(myAddress_),
   priority(priority_),
   masterAddress("")
-  {
-    clientSocket.setsockopt(ZMQ_RCVTIMEO, 6000);
-    clientSocket.setsockopt(ZMQ_SNDTIMEO, 1000);
-    clientSocket.setsockopt(ZMQ_REQ_RELAXED, 1);
-    
-    subscriberSocket.connect ("tcp://"+registerServiceAddress+":"+std::to_string(broadcastPort));
-    subscriberSocket.setsockopt(ZMQ_SUBSCRIBE, "", 0);
-    
-    registerSocket.connect ("tcp://"+registerServiceAddress+":"+std::to_string(registerPort));
+  { 
   }
     
 void Node::start()
@@ -25,17 +18,14 @@ void Node::start()
   std::cout<<"Server address: "<<myAddress<<std::endl;
   std::cout<<"Priority: "<<priority<<std::endl;
   
-  BalancingServer server(context, myAddress, *this);
-  
-  std::thread register_t(std::bind(&Node::registerMyAddress, this, 15));
+  std::thread register_t(std::bind(&RegisterNodeAddress::run, &registerAddress, 15));
   std::thread server_t(std::bind(&BalancingServer::run, &server));
-  std::thread masterListener_t(std::bind(&Node::masterListener, this));
-  std::thread client_t(std::bind(&Node::client, this));
+  std::thread masterListener_t(std::bind(&MasterListener::run, &masterListener));
+  std::thread client_t(std::bind(&Client::run, &client));
   register_t.join();
   server_t.join();
   masterListener_t.join();
   client_t.join();
-  
   
   std::cout<<"Shutting down node"<<std::endl;
 }
@@ -46,103 +36,36 @@ std::string Node::getMasterAddress() const
   return masterAddress;
 }
 
-void Node::client()
-{ 
-  while (true) 
-  {
-    while(getMasterAddress() == "")
-    {
-      std::cout<<"Waiting for master..."<<std::endl;
-      std::this_thread::sleep_for(std::chrono::seconds(2));
-    }
-    prompt();
-    std::string cmdStr;
-    std::getline(std::cin, cmdStr);
-    
-    messages::proto::Msg cmdReq;
-    cmdReq.set_type(messages::proto::Msg_MessageType_TYPE_Command);
-    cmdReq.mutable_comand()->set_cmd(cmdStr); 
-    if(!clientSocket.send (cmdReq))
-    {
-      std::cout<<"Master unavailable."<< std::endl;
-      changeMasterAddress(getMasterAddress(), true);
-      continue;
-    }
-
-    messages::proto::Msg cmdResult;
-    if(!clientSocket.recv (cmdResult))
-    {
-      std::cout<<"Timeout, master not respond."<< std::endl;
-      changeMasterAddress(getMasterAddress(), true);
-    }
-    else if (cmdResult.result().return_code() == 0)
-    {
-      std::cout<<cmdResult.result().cmd() << std::endl;
-    }
-    else
-    {
-      std::cout<<"Error, Error code: " << cmdResult.result().return_code() << std::endl;
-    }
-  }
-}
-
-void Node::prompt()
+std::string Node::getMyAddress() const
 {
-  std::cout<<"#############################\n\
-#enter command which needs to be executed #\n\
-#############################"<<std::endl;
-  
+  return myAddress;
 }
 
-
-
-void Node::masterListener()
+int Node::getPriority() const
 {
-  
-  while (true) 
-  {
-      messages::proto::Msg msgReq;
-      subscriberSocket.recv (msgReq);
-      if(msgReq.type() == messages::proto::Msg_MessageType_TYPE_MasterBroadcast)
-      {
-	changeMasterAddress(msgReq.masterbroadcast().masteraddress());
-      }
-  }
+  return priority;
 }
 
-void Node::registerMyAddress(int interval)
+std::string Node::getRegisterEndpoint()
 {
-  while(true)
-  {
-    messages::proto::Msg registerMsg;
-    registerMsg.set_type(messages::proto::Msg_MessageType_TYPE_RegisterReq);
-    registerMsg.mutable_registerreq()->set_address(myAddress);
-    registerMsg.mutable_registerreq()->set_priority(priority);
-    registerSocket.send (registerMsg);
-    
-    messages::proto::Msg respMsg;
-    registerSocket.recv (respMsg);
-    changeMasterAddress(respMsg.registerres().masteraddress());
-    
-    std::this_thread::sleep_for(std::chrono::seconds(interval));
-  }
+  return registerServiceAddress+":"+std::to_string(registerPort);
+  return registerServiceAddress+":"+std::to_string(registerPort);
 }
 
-void Node::changeMasterAddress(std::string newMasterAddress, bool reconnectToThesameMaster)
+std::string Node::getBroadcatMasterEndpoint()
+{
+  return registerServiceAddress+":"+std::to_string(broadcastMasterPort);
+}
+
+
+void Node::changeMasterAddress(std::string newMasterAddress)
 {
   std::lock_guard<std::mutex> masterAddressGuard(masterAddressMutex);
-  if(masterAddress == newMasterAddress && !reconnectToThesameMaster)
+  if(masterAddress == newMasterAddress)
     return;
   
-  if(masterAddress != "")
-  {
-    clientSocket.disconnect("tcp://"+masterAddress);
-  }
+  client.reconnect(masterAddress, newMasterAddress);
   masterAddress = newMasterAddress;
-  if(masterAddress != "")
-  {
-    clientSocket.connect ("tcp://"+newMasterAddress);
-  }
 }
   
 /*not implemented

@@ -18,15 +18,13 @@ public:
     BalancingServer(BalancingServer&) = delete;
     BalancingServer& operator=(BalancingServer&) = delete;
     
-    BalancingServer(zmq::context_t& context, std::string myAddress_, const Node &node_);
+    BalancingServer(zmq::context_t& context,  const Node &node_);
 
     enum { kMaxThread = 10 };
 
     void run();
 
 private:
-    std::string myAddress;
-    
     const Node &node;
     zmq::context_t& context;
     
