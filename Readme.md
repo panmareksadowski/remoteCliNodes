@@ -7,4 +7,5 @@ ubuntu 16.04
 sudo apt-get -y update && sudo apt-get -y install libzmqpp-dev cmake g++ libprotobuf-dev git protobuf-compiler google-mock
 
 ```
+Task description(PL) in file ZadanieCPP.pdf.
 
